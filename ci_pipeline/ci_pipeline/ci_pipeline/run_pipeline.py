@@ -2,7 +2,7 @@
 import os
 
 # مسیر خروجی روی Runner گیتهاب:
-BASE = os.environ.get("BASE_DIR", "./artifacts")
+BASE = os.getenv("BASE", "./run_out")
 TABLES_DIR = os.path.join(BASE, "tables")
 SNAPSHOT_DIR = os.path.join(BASE, "snapshots")
 
