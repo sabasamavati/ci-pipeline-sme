@@ -1,0 +1,28 @@
+name: CI Pipeline (Scheduled)
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 */12 * * *"   # هر 12 ساعت یکبار (UTC)
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ci_pipeline/ci_pipeline/requirements.txt
+
+      - name: Run pipeline
+        env:
+          BASE: ./run_out     # خروجی‌ها
