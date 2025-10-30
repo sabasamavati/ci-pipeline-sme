@@ -1,42 +1,60 @@
 name: CI Pipeline (Scheduled)
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:            # اجرا دستی
   schedule:
-    - cron: "0 6 * * *"   # هر روز 06:00 UTC
+    - cron: '0 13 */3 * *'      # هر ۳ روز ساعت 13:00 UTC
 
 jobs:
   run:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
-          if [ -f "ci_pipeline/ci_pipeline/requirements.txt" ]; then
-            pip install -r ci_pipeline/ci_pipeline/requirements.txt
-          elif [ -f "requirements.txt" ]; then
-            pip install -r requirements.txt
-          else
-            pip install requests beautifulsoup4 lxml pandas feedparser
-          fi
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f ci_pipeline/requirements.txt ]; then pip install -r ci_pipeline/requirements.txt; fi
+          if [ -f ci_pipeline/ci_pipeline/requirements.txt ]; then pip install -r ci_pipeline/ci_pipeline/requirements.txt; fi
 
+      # اگر فایل اجرای اصلی‌ات در ریشه است:
       - name: Run pipeline
-        env:
-          BASE: ./run_out
-        run: python run_pipeline.py
+        run: |
+          python run_pipeline.py --no-colab --out ./run_out
+        shell: bash
 
-      - name: Upload artifact (outputs)
+      # اگر run_pipeline.py داخل پوشه‌ی ci_pipeline است، به‌جای step بالا این را بگذار:
+      # - name: Run pipeline
+      #   run: |
+      #     python ci_pipeline/run_pipeline.py --no-colab --out ./run_out
+      #   shell: bash
+
+      - name: Upload artifacts (CSV & XLSX)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: run_out
-          path: run_out/**
-          if-no-files-found: warn
+          name: snapshot_${{ github.run_id }}
+          path: |
+            run_out/**
+            **/*.csv
+            **/*.xlsx
+          if-no-files-found: ignore
 
+      # (اختیاری) ذخیره‌ی خروجی‌ها داخل همان ریپو
+      - name: Commit outputs to repo
+        if: success()
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Automated snapshot: ${{ github.run_number }}"
+          file_pattern: run_out/**
