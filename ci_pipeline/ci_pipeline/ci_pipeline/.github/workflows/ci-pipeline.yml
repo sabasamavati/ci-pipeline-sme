@@ -1,13 +1,14 @@
 name: CI Pipeline (Scheduled)
 
 on:
+  workflow_dispatch: {}
   schedule:
-    - cron: "0 12 */3 * *"   # هر 3 روز ساعت 12:00 UTC
-  workflow_dispatch: {}       # امکان اجرای دستی
+    - cron: "0 */12 * * *"  # هر 12 ساعت یکبار (UTC)
 
 jobs:
-  run:
+  run-pipeline:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -15,20 +16,22 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Install deps
         run: |
-          pip install -r ci_pipeline/requirements.txt
+          python -m pip install --upgrade pip
+          pip install -r ci_pipeline/ci_pipeline/requirements.txt
 
       - name: Run pipeline
         env:
-          BASE_DIR: ./artifacts
+          BASE: ./run_out   # همین باعث میشه خروجی‌ها داخل run_out بیاد
         run: |
-          python ci_pipeline/run_pipeline.py
+          python run_pipeline.py
 
-      - name: Upload artifacts (CSV/XLSX)
+      - name: Upload snapshot artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ci_snapshot_output
-          path: artifacts/**/*
+          name: snapshot-${{ github.run_id }}
+          path: run_out/**
+          if-no-files-found: warn
