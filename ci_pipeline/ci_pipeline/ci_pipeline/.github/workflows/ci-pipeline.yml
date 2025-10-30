@@ -3,12 +3,12 @@ name: CI Pipeline (Scheduled)
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "0 */12 * * *"  # هر 12 ساعت یکبار (UTC)
+    - cron: "0 6 * * *"   # هر روز 06:00 UTC
 
 jobs:
-  run-pipeline:
+  run:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -18,20 +18,24 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r ci_pipeline/ci_pipeline/requirements.txt
+          if [ -f "ci_pipeline/ci_pipeline/requirements.txt" ]; then
+            pip install -r ci_pipeline/ci_pipeline/requirements.txt
+          elif [ -f "requirements.txt" ]; then
+            pip install -r requirements.txt
+          else
+            pip install requests beautifulsoup4 lxml pandas feedparser
+          fi
 
       - name: Run pipeline
         env:
-          BASE: ./run_out   # همین باعث میشه خروجی‌ها داخل run_out بیاد
-        run: |
-          python run_pipeline.py
+          BASE: ./run_out
+        run: python run_pipeline.py
 
-      - name: Upload snapshot artifact
+      - name: Upload artifact (outputs)
         uses: actions/upload-artifact@v4
         with:
-          name: snapshot-${{ github.run_id }}
+          name: run_out
           path: run_out/**
           if-no-files-found: warn
